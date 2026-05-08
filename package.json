@@ -1,0 +1,29 @@
+{
+  "name": "@tiagohanna/web-search-mcp",
+  "version": "1.0.0",
+  "description": "Web search MCP server for AI agents — DuckDuckGo + content extraction. No API key needed.",
+  "type": "module",
+  "bin": {
+    "web-search-mcp": "dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "keywords": ["mcp", "web-search", "ai-agent", "duckduckgo", "model-context-protocol"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tiagohanna123/web-search-mcp.git"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "duck-duck-scrape": "^2.0.0",
+    "cheerio": "^1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0",
+    "@types/node": "^22.0.0"
+  }
+}
