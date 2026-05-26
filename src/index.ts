@@ -39,7 +39,7 @@ async function chromiumSearch(query: string, count: number) {
     });
 
     await page.goto(
-      `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
+      `https://search.brave.com/search?q=${encodeURIComponent(query)}`,
       {
         waitUntil: "domcontentloaded",
         timeout: 30000,
@@ -48,14 +48,8 @@ async function chromiumSearch(query: string, count: number) {
 
     await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
-    const pageText = await page.textContent("body");
-
-    if (pageText?.toLowerCase().includes("anomaly")) {
-      throw new Error("DuckDuckGo detected an anomaly / rate limited this request.");
-    }
-
     const results = await page.$$eval(
-      "a.result__a, .result__title a, h2 a, a[href]",
+      'a[href^="http"]',
       (links, count) => {
         const seen = new Set<string>();
 
@@ -67,19 +61,21 @@ async function chromiumSearch(query: string, count: number) {
 
             if (!title || !url) return null;
             if (
-              url.includes("duckduckgo.com") ||
-              url.startsWith("javascript:") ||
-              url.startsWith("#")
+              url.includes("search.brave.com") ||
+              url.includes("brave.com/search") ||
+              url.startsWith("javascript:")
             ) {
               return null;
             }
 
-            const parent = a.closest(".result, .web-result, article, div");
-            const snippet =
-              parent?.querySelector(".result__snippet, .snippet, .result__body")?.textContent?.trim() ||
-              "";
+            const parent = a.closest("article, div");
+            const snippet = parent?.textContent?.replace(/\s+/g, " ").trim() || "";
 
-            return { title, url, snippet };
+            return {
+              title,
+              url,
+              snippet: snippet.slice(0, 300),
+            };
           })
           .filter((item): item is { title: string; url: string; snippet: string } => {
             if (!item) return false;
