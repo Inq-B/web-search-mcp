@@ -1,11 +1,11 @@
-FROM mcr.microsoft.com/playwright:v1.49.1-noble AS builder
+FROM mcr.microsoft.com/playwright:v1.60.0-noble AS builder
 
 WORKDIR /app
 
 COPY package*.json ./
 RUN npm install
 RUN npm uninstall duck-duck-scrape || true
-RUN npm install playwright
+RUN npm install playwright@1.60.0
 
 COPY . .
 
@@ -14,7 +14,7 @@ RUN node -e "const fs=require('fs'); const p='tsconfig.json'; const j=JSON.parse
 RUN npm run build
 
 
-FROM mcr.microsoft.com/playwright:v1.49.1-noble AS runtime
+FROM mcr.microsoft.com/playwright:v1.60.0-noble AS runtime
 
 WORKDIR /app
 
@@ -24,7 +24,7 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 COPY package*.json ./
 RUN npm install --omit=dev
 RUN npm uninstall duck-duck-scrape || true
-RUN npm install playwright
+RUN npm install playwright@1.60.0
 
 COPY --from=builder /app/dist ./dist
 
