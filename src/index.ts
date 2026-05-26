@@ -39,30 +39,65 @@ async function chromiumSearch(query: string, count: number) {
     });
 
     await page.goto(
-      `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
+      `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
       {
         waitUntil: "domcontentloaded",
         timeout: 30000,
       }
     );
 
-    await page.waitForSelector(".result", { timeout: 15000 });
+    await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
-    return await page.$$eval(
-      ".result",
-      (nodes, count) =>
-        nodes.slice(0, Number(count)).map((node) => {
-          const titleEl = node.querySelector(".result__title a");
-          const snippetEl = node.querySelector(".result__snippet");
+    const pageText = await page.textContent("body");
 
-          return {
-            title: titleEl?.textContent?.trim() || "",
-            url: (titleEl as HTMLAnchorElement | null)?.href || "",
-            snippet: snippetEl?.textContent?.trim() || "",
-          };
-        }),
+    if (pageText?.toLowerCase().includes("anomaly")) {
+      throw new Error("DuckDuckGo detected an anomaly / rate limited this request.");
+    }
+
+    const results = await page.$$eval(
+      "a.result__a, .result__title a, h2 a, a[href]",
+      (links, count) => {
+        const seen = new Set<string>();
+
+        return links
+          .map((link) => {
+            const a = link as HTMLAnchorElement;
+            const title = a.textContent?.trim() || "";
+            const url = a.href || "";
+
+            if (!title || !url) return null;
+            if (
+              url.includes("duckduckgo.com") ||
+              url.startsWith("javascript:") ||
+              url.startsWith("#")
+            ) {
+              return null;
+            }
+
+            const parent = a.closest(".result, .web-result, article, div");
+            const snippet =
+              parent?.querySelector(".result__snippet, .snippet, .result__body")?.textContent?.trim() ||
+              "";
+
+            return { title, url, snippet };
+          })
+          .filter((item): item is { title: string; url: string; snippet: string } => {
+            if (!item) return false;
+            if (seen.has(item.url)) return false;
+            seen.add(item.url);
+            return true;
+          })
+          .slice(0, Number(count));
+      },
       count
     );
+
+    if (!results.length) {
+      const body = (await page.textContent("body"))?.slice(0, 500) || "";
+      throw new Error(`No search results found. Page began with: ${body}`);
+    }
+
+    return results;
   } finally {
     await browser.close();
   }
